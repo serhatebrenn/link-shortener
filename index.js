@@ -6,6 +6,8 @@ const app= express();
 const PORT =3000;
 
 app.use(express.json());
+// Statik dosyaları sunma
+app.use(express.static('public'));
 
 //MySQL bağlantısını yapılandırma
 const connection = mysql.createConnection({
@@ -87,4 +89,30 @@ app.get('/:short_url', (req, res) => {
       }
     );
   });
-  
+  app.post('/shorten', (req, res) => {
+    const { original_url } = req.body;
+    const short_url = Math.random().toString(36).substring(2, 8); // Kısaltılmış link oluşturma
+    connection.query(
+        'INSERT INTO links (original_url, short_url) VALUES (?, ?)',
+        [original_url, short_url],
+        (err, results) => {
+            if (err) return res.status(500).send(err);
+            res.json({ short_url }); // short_url'yi JSON formatında frontend'e gönderiyoruz
+        }
+    );
+});
+
+
+app.get('/:short_url', (req, res) => {
+    const { short_url } = req.params;
+    connection.query(
+        'SELECT original_url FROM links WHERE short_url = ?',
+        [short_url],
+        (err, results) => {
+            if (err) return res.status(500).send(err);
+            if (results.length === 0) return res.status(404).send('Link not found');
+            res.redirect(results[0].original_url);
+        }
+    );
+});
+
